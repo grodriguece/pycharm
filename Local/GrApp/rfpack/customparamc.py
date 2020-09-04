@@ -1,22 +1,12 @@
+from pathlib import Path
 import numpy as np
 import pandas as pd
-# from pathlib import Path
-from datetime import date
 import sqlite3
 from plotnine import *
-from pyexcelerate import Workbook
-from pyexcelerate_to_excel import pyexcelerate_to_excel
 from rfpack.switcherc import *
-# from rfpack.carriersc import carriers
-# from rfpack.carrierlc import carrierl
-# from rfpack.carrtextc import carrtext
-# from rfpack.carrtexlc import carrtexl
 from rfpack.statzonc import statzon
 from rfpack.par_auditc import par_audit
-from rfpack.cleaniparmc import cleaniparm
-from rfpack.cleaniparm2c import cleaniparm2
-# from rfpack.pntopdc import pntopd
-# from rfpack.tabconvc import tabconv
+from rfpack.cleaniparmc import cleaniparm, cleaniparm2
 from mizani.transforms import trans
 
 
@@ -36,22 +26,26 @@ class asinh_trans(trans):
         return np.sinh(y)
 
 
-def customparam(datb, tab_par):
+def customparam(datb, tab_par, iterini, root1, my_progress1, proglabel21):
     dat_dir = datb.parent
-    today = date.today()
-    wb = Workbook()  # pyexcelerate Workbook
+    (dat_dir / 'csv').mkdir(parents=True, exist_ok=True)  # create csv folder to save temp files
+    lst = []  # list with xlsx sheet order
+    dict1 = {'id': str(1), 'name': 'Total'}
+    lst.append(dict1.copy())
+    shorder = 2  # xlsx sheet order
     pnglist = []
     consfull = []
     conspref = []
-    tit = today.strftime("%y%m%d") + '_Feat1ParAudit'
-    xls_file = tit + ".xlsx"
-    xls_path = dat_dir / xls_file
     conn = sqlite3.connect(datb)  # database connection
     c = conn.cursor()
     ftab1 = tab_par + '.csv'  # tables and parameters to audit
     df3 = pd.read_csv(dat_dir / ftab1)
     df4 = df3.groupby('table_name')['parameter'].apply(list).reset_index(name='parlist')
+    tabqty = len(df4)
     for index, row in df4.iterrows(): # table row iteration
+        my_progress1['value'] = iterini + round(index / tabqty * 53)  # prog bar up to iterini +53
+        proglabel21.config(text=my_progress1['value'])  # prog bar updt
+        root1.update_idletasks()
         line = row['table_name']
         namtoinx = 'LNCELname'    # default values for lncel related tables
         carrfilt = 'earfcnDL'
@@ -84,7 +78,10 @@ def customparam(datb, tab_par):
         try:  # include queries for all and carrier, pending
             datsrc = pd.read_sql_query("select " + parstring + " from " + tabsq + ";", conn,
                                        index_col=[namtoinx, 'Prefijo'])
-            pyexcelerate_to_excel(wb, datsrc, sheet_name=line + '_data', index=True)  # saves raw info
+            datsrc.to_csv(dat_dir / 'csv' / Path(line + '_data.csv'))
+            dict1 = {'id': str(shorder), 'name': line + '_data'}
+            lst.append(dict1.copy())  # saves raw info
+            shorder += 1
             if not (line == 'LNBTS' or line == 'RNFC' or line == 'WBTS'):
                 datsrc = datsrc.dropna(subset=['Banda'])  # cleans NaN band registers
             for i in range(0, n):  # loop for each carrier. once for no carrier tables
@@ -101,10 +98,6 @@ def customparam(datb, tab_par):
                 if len(df2) > 0:  # control for empty df
                     stpref = statzon(df2)  # stats per parameter and prefijo
                     st = par_audit(df2)  # stats per parameter full set
-                    output = 'parametros.csv'
-                    st.to_csv(dat_dir / output)
-                    output = 'parametro.csv'
-                    stpref.to_csv(dat_dir / output)
                     df2, st = cleaniparm(dat_dir, "ExParam.csv", "expfeat1", df2, st)  # info parameter removal
                     if line == 'LNBTS' or line == 'RNFC' or line == 'WBTS' or carr == 'all':
                         sttemp = st.copy(deep=True)
@@ -112,16 +105,22 @@ def customparam(datb, tab_par):
                         sttemp1 = stpref.copy(deep=True)
                         sttemp1.insert(0, 'table', line)
                         if len(consfull) == 0:  # empty stzf control
-                            consfull = sttemp
+                            consfull = sttemp   # review info to png
                         else:
                             consfull = consfull.append(sttemp)
                         if len(conspref) == 0:  # empty stzf control
-                            conspref = sttemp1
+                            conspref = sttemp1  # pref review info to png
                         else:
                             conspref = conspref.append(sttemp1)
                     else:
-                        pyexcelerate_to_excel(wb, st, sheet_name=line + str(carr), index=True)
-                        pyexcelerate_to_excel(wb, stpref, sheet_name=line + str(carr) + 'pref', index=True)
+                        st.to_csv(dat_dir / 'csv' / Path(line + str(carr) + '.csv'))
+                        dict1 = {'id': str(shorder), 'name': line + str(carr)}
+                        lst.append(dict1.copy())
+                        shorder += 1
+                        stpref.to_csv(dat_dir / 'csv' / Path(line + str(carr) + 'pref' + '.csv'))
+                        dict1 = {'id': str(shorder), 'name': line + str(carr) + 'pref'}
+                        lst.append(dict1.copy())
+                        shorder += 1
                     df2, st = cleaniparm2(df2, st)  # standardized params and NaN>0.15*n removal
                     parqty = len(st)   # parameter amount
                     if parqty > 0: # only for parameters with discrepancies
@@ -173,7 +172,7 @@ def customparam(datb, tab_par):
                         else:
                             n = 2  # top 2 plots
                         for j in range(0, n):
-                            toplot = resultzon.loc[resultzon['topdisc'] == j]  # filter info for parameter set to be printed
+                            toplot = resultzon.loc[resultzon['topdisc'] == j]  # filter info for param set to be printed
                             toplot1 = stpref.loc[stpref['topdisc'] == j]
                             custom_axis = theme(axis_text_x=element_text(color="grey", size=7, angle=90, hjust=.3),
                                                 axis_text_y=element_text(color="grey", size=7),
@@ -183,12 +182,14 @@ def customparam(datb, tab_par):
                                                 # 2nd value number of rows and colunms
                                                 figure_size=(5 * 4, 3.5 * 4)
                                                 )
-                            top_plot = (ggplot(data=toplot, mapping=aes(x='parameter', y='value')) + geom_boxplot() +
-                                        geom_text(data=toplot1, mapping=aes(x='parameter', y='StdDev', label='concat'),
-                                                  color='red', va='top', ha='left', size=7, nudge_x=.6, nudge_y=-1.5) +
-                                        facet_wrap('Prefijo') + custom_axis + scale_y_continuous(
-                                        trans=asinh_trans) + ylab("Values") + xlab("Parameters") +
-                                        labs(title="Top " + str(j + 1) + " Disc Parameter per Zone. " + cart) + coord_flip())
+                            top_plot = (ggplot(data=toplot, mapping=aes(x='parameter', y='value')) + geom_boxplot()
+                                        + geom_text(data=toplot1,
+                                                    mapping=aes(x='parameter', y='StdDev', label='concat'),
+                                                    color='red', va='top', ha='left', size=7, nudge_x=.6, nudge_y=-1.5)
+                                        + facet_wrap('Prefijo') + custom_axis + scale_y_continuous(trans=asinh_trans)
+                                        + ylab("Values") + xlab("Parameters")
+                                        + labs(title="Top " + str(j + 1) + " Disc Parameter per Zone. " + cart)
+                                        + coord_flip())
                             pngname = str(line) + str(carr) + str(j + 1) + ".png"
                             pngfile = dat_dir / pngname
                             top_plot.save(pngfile, width=20, height=10, dpi=300)
@@ -211,8 +212,10 @@ def customparam(datb, tab_par):
             consfull.loc[index, 'prorder'] = 2
         else:
             consfull.loc[index, 'prorder'] = 3
-    pyexcelerate_to_excel(wb, consfull, sheet_name='Total', index=False)
-    wb.save(xls_path)
+    my_progress1['value'] = 60  # prog bar 60
+    proglabel21.config(text=my_progress1['value'])  # prog bar updt
+    root1.update_idletasks()
+    consfull.to_csv(dat_dir / 'csv' / Path('Total.csv'), index=False)
     c.close()
     conn.close()
-    return pnglist
+    return pnglist, lst

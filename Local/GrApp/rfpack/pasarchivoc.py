@@ -1,20 +1,22 @@
-def pasarchivo(ruta, datb, tablas, tipo):
+import tkinter as tk
+import sqlite3
+import pandas as pd
+import timeit
+from pyexcelerate import Workbook
+from datetime import date
+from tkinter import messagebox
+from tkinter import Label
+
+
+def pasarchivo(datb, tablas, tipo, iterini, root1, my_progress1, proglabel21):
     """copy to csv files tables from query results"""
-    import tkinter as tk
-    import sqlite3
-    import pandas as pd
-    import timeit
-    from pyexcelerate import Workbook
-    from pathlib import Path
-    from datetime import date
     top = tk.Toplevel()
     top.title("Process Progress")
     top.geometry("300x600+750+120")
     top.iconbitmap('IT.ico')
-    dat_dir = Path(ruta)
-    db_path1 = dat_dir / datb
+    dat_dir = datb.parent
     start_time = timeit.default_timer()
-    conn = sqlite3.connect(db_path1)                # database connection
+    conn = sqlite3.connect(datb)                # database connection
     c = conn.cursor()
     today = date.today()
     df1 = pd.read_csv(tablas)
@@ -24,11 +26,14 @@ def pasarchivo(ruta, datb, tablas, tipo):
     wb = Workbook()                                 # excelerator file init
     i = 0
     for index, row in df1.iterrows():               # panda row iteration tablas file by tipo column
+        my_progress1['value'] = iterini + round(index / len(df1) * 95)  # prog bar up to iterini + 95
+        proglabel21.config(text=my_progress1['value'])  # prog bar updt
+        root1.update_idletasks()
         line = row[tipo]
         if not pd.isna(row[tipo]):                  # nan null values validation
             try:
                 df = pd.read_sql_query("select * from " + line + ";", conn)  # pandas dataframe from sqlite
-                if len(df) > 1000000:                   # excel not supported
+                if len(df) > 1000000:                   # excel not supported, big file
                     csv_loc = line + today.strftime("%y%m%d") + '.csv.gz'   # compressed csv file name
                     print('Table {} saved in {}'.format(line, csv_loc))
                     feedbk = tk.Label(top, text='Table {} saved in {}'.format(line, csv_loc))
@@ -78,6 +83,12 @@ def pasarchivo(ruta, datb, tablas, tipo):
     top.update_idletasks()
     c.close()
     conn.close()
-
-
-# pasarchivo("C:/SQLite", "20200522_sqlite.db", "tablasSQL.csv", "Audit")
+    my_progress1['value'] = 100  # prog bar increase a cording to i steps in loop
+    proglabel21.config(text=my_progress1['value'])
+    response = messagebox.showinfo("Tablas", "Process Finished")
+    proglabel3 = Label(root1, text=response)
+    # proglabel3 = Label(root, text="")
+    # proglabel3.grid(row=3, column=1, pady=10)
+    my_progress1['value'] = 0  # prog bar increase a cording to i steps in loop
+    proglabel21.config(text="   ")
+    root1.update_idletasks()

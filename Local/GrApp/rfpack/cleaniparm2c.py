@@ -1,4 +1,5 @@
 def cleaniparm2(df, st):
+    df = df.copy(deep=True)  # Modifications to the data of the copy wont be reflected in the orig object
     n = len(df.index)
     # ldcol = st.loc[]
     df.drop(st[st['StdDev'] == 0].index, axis=1, inplace=True)

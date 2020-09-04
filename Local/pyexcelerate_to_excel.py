@@ -1,4 +1,4 @@
-def pyexecelerate_to_excel(workbook_or_filename, df, sheet_name='Sheet1', origin=(1, 1), columns=True, index=False):
+def pyexcelerate_to_excel(workbook_or_filename, df, sheet_name='Sheet1', origin=(1, 1), columns=True, index=False):
     """
     Write DataFrame to excel file using pyexelerate library
     """

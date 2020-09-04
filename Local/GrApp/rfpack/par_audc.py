@@ -1,3 +1,4 @@
+from plotnine import *
 from mizani.transforms import trans
 import numpy as np
 
@@ -18,21 +19,30 @@ class asinh_trans(trans):
         return np.sinh(y)
 
 
-def par_aud(ruta, datb, tablas, tipo):
+def par_aud(datab, tablas, tipo, iterini, root1, my_progress1, proglabel21):
 
+    import pandas as pd
     from pyexcelerate import Workbook
-    from pyexcelerate_to_excel import pyexcelerate_to_excel
+    from pyexcelerate_toexcel import pyexcelerate_to_excel
     from datetime import date
     import sqlite3
+    from rfpack.carriersc import carriers
+    from rfpack.carrierlc import carrierl
+    from rfpack.carrtextc import carrtext
+    from rfpack.carrtexlc import carrtexl
+    from rfpack.statzonc import statzon
+    from rfpack.par_auditc import par_audit
+    from rfpack.cleaniparmc import cleaniparm
+    from rfpack.cleaniparm2c import cleaniparm2
+    from rfpack.pntopdc import pntopd
 
-    dat_dir = Path(ruta)
-    db_path1 = dat_dir / datb
-    conn = sqlite3.connect(db_path1)  # database connection
+    dat_dir = datab.parent
+    conn = sqlite3.connect(datab)  # database connection
     c = conn.cursor()
-    df1 = pd.read_csv(dat_dir / tablas)
+    df1 = pd.read_csv(tablas)
     today = date.today()
-    xls_file = tipo + today.strftime("%y%m%d") + ".xlsx"
-    xls_path = dat_dir / xls_file  # xls file path-name
+    # xls_file = tipo + today.strftime("%y%m%d") + ".xlsx"
+    # xls_path = dat_dir / xls_file  # xls file path-name
     wb = Workbook()  # pyexcelerate Workbook
     pnglist = []
     tit = today.strftime("%y%m%d") + '_ParameterAudit'
@@ -41,6 +51,9 @@ def par_aud(ruta, datb, tablas, tipo):
     pdf_file = tit + ".pdf"
     pdf_path = dat_dir / pdf_file
     for index, row in df1.iterrows():  # table row iteration by audit2 column type
+        my_progress1['value'] = iterini + round(index / len(df1 * 75)  # prog bar up to iterini + 75
+        proglabel21.config(text=my_progress1['value'])  # prog bar updt
+        root1.update_idletasks()
         line = row[tipo]
         if not pd.isna(row[tipo]):  # nan null values validation
             if line == 'LNCEL' or line == 'WCEL' : # carrier count - amount of graphs 1 for BTS
@@ -66,14 +79,14 @@ def par_aud(ruta, datb, tablas, tipo):
                     elif line == 'WBTS':
                         df = pd.read_sql_query("select * from WBTS_Full1;", conn, index_col=['WBTSName', 'Prefijo'])
                     elif line == 'LNCEL':
-                        if carr == 'Lall':
+                        if carr == 'all':
                             df = pd.read_sql_query("select * from LNCEL_Full;", conn, index_col=['LNCELname', 'Prefijo'])
                         else:
                             df = pd.read_sql_query("select * from LNCEL_Full where (earfcnDL = " + str(carr) + ");",
                                                    conn, index_col=['LNCELname', 'Prefijo'])
                         df = df.dropna(subset=['Banda'])   # drop rows with band nan
                     elif line == 'WCEL':
-                        if carr == 'Uall':
+                        if carr == 'all':
                             df = pd.read_sql_query("select * from WCEL_FULL1;", conn, index_col=['WCELName', 'Prefijo'])
                         else:
                             df = pd.read_sql_query("select * from WCEL_FULL1 where (UARFCN = " + str(carr) + ");",
@@ -83,15 +96,15 @@ def par_aud(ruta, datb, tablas, tipo):
                     output = 'parametros.csv'
                     st.to_csv(dat_dir / output)
                     if line == 'LNBTS':
-                        df, st = cleanIparm(dat_dir, "ExParam.csv", "explwbt", df, st)  # info parameter removal
+                        df, st = cleaniparm(dat_dir, "ExParam.csv", "explwbt", df, st)  # info parameter removal
                     elif line == 'WBTS':
-                        df, st = cleanIparm(dat_dir, "ExParam.csv", "expwbts", df, st)  # info parameter removal
+                        df, st = cleaniparm(dat_dir, "ExParam.csv", "expwbts", df, st)  # info parameter removal
                     elif line == 'LNCEL':
-                        df, st = cleanIparm(dat_dir, "ExParam.csv", "explcel", df, st)  # info parameter removal
+                        df, st = cleaniparm(dat_dir, "ExParam.csv", "explcel", df, st)  # info parameter removal
                     elif line == 'WCEL':
-                        df, st = cleanIparm(dat_dir, "ExParam.csv", "expar", df, st)  # info parameter removal
+                        df, st = cleaniparm(dat_dir, "ExParam.csv", "expar", df, st)  # info parameter removal
                     pyexcelerate_to_excel(wb, st, sheet_name= str(carr), index=True)
-                    df, st = cleanIparm2(df, st)  # standardized params and NaN>0.15*n removal
+                    df, st = cleaniparm2(df, st)  # standardized params and NaN>0.15*n removal
                     st['topdisc'] = range(len(st))  # top disc counter by IQR-CV
                     st['topdisc'] = st['topdisc'].floordiv(10)  # split disc in groups by 10
                     st.sort_values(by=['Median'], inplace=True, ascending=[False])  # for better visualization
@@ -162,6 +175,8 @@ def par_aud(ruta, datb, tablas, tipo):
                     feedbk = tk.Label(top, text='SQLite error: %s' % (' '.join(error.args)))
                     feedbk.pack()
     wb.save(xls_path)
+    90
     pntopd(pdf_path, pnglist, 50, 550, 500, 500)
+    100
     c.close()
     conn.close()

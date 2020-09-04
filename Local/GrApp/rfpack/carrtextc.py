@@ -1,7 +1,7 @@
 # case function for carrier selection. switcher is dictionary data type
 def carrtext(carr):
     switcher = {
-        0: 'UTotal',
+        0: 'Total',
         1: 'Carrier I: 4387',
         2: 'Carrier II: 9712',
         3: 'Carrier III: 9685',

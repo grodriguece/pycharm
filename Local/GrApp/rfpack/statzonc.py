@@ -1,4 +1,8 @@
 def statzon(df):
+    from rfpack.zonec import zone
+    from rfpack.par_auditc import par_audit
+
+    df = df.copy(deep=True)  # Modifications to the data of the copy wont be reflected in the orig object
     dftemp = df.reset_index(level=(0, 1))
     stzf = []
     n = 10  # zone number

@@ -2,7 +2,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 
-def neworder(file, fpos, tpos):
+def xlsxreorder(file, fpos, tpos):
     """Takes a list of ints, and inserts the fpos (from position) int, to tpos (to position)"""
     wb = load_workbook(filename=file)
     shlist = wb.sheetnames  # # Get current order sheets in workbook
@@ -29,7 +29,3 @@ def neworder(file, fpos, tpos):
     wb._sheets = [wb._sheets[i] for i in lst]  # get each object instance from  wb._sheets, and replace
     wb.save(filename=file)
     return
-
-
-filex = Path('C:/SQLite/Feat2.xlsx')
-neworder(filex, 0, 85)
