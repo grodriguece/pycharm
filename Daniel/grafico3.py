@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt     # The code below assumes this convenient renaming
+
 xvals = np.arange(-6, 6, 0.01)  # Grid of 0.01 spacing from -2 to 10
 yvals = 3*np.sin(xvals*5 + np.pi/2) + 3  # Evaluate function on xvals
 plt.plot(xvals, yvals)  # Create line plot with yvals against xvals

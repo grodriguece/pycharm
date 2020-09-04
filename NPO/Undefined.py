@@ -16,7 +16,7 @@ c.execute("""CREATE TABLE ADCE_Add (
             )""")
 c.execute("DROP TABLE IF EXISTS ADCE_Dep")
 c.execute("""CREATE TABLE ADCE_Dep (
-            BSCidS int, BCFidS int, BTSidS int, 
+            BSCidS int, BCFidS int, BTSidS int,
             LACT int, cellIdT int
             )""")
 
@@ -41,11 +41,11 @@ def insert_dead(dead):
          'LACT': dead.LACT, 'cellIdT': dead.cellIdT})
 
 
-def get_miss(missc):
-    with conn:
-        c.execute("SELECT rowid, * FROM UND_DistF2 WHERE (BTSS = (:btss))",
-                  {'btss': missc})
-        return c.fetchall()
+# def get_miss(missc):
+#     with conn:
+#         c.execute("SELECT rowid, * FROM UND_DistF2 WHERE (BTSS = (:btss))",
+#                   {'btss': missc})
+#         return c.fetchall()
 
 
 def get_015(exist):

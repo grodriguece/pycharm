@@ -2,9 +2,9 @@ import sqlite3
 from tkinter import *
 from tkinter import ttk
 root = Tk()
-root.title('Missing_Audit')
+root.title('NorOcc Table - Audit Process')
 root.iconbitmap('IT.ico')
-root.geometry("800x400")
+root.geometry("800x400+350+200")        # WxH+Right+Down
 
 
 def pasarchivo(ruta, datb, tablas, tipo):
@@ -371,6 +371,7 @@ my_progress = ttk.Progressbar(root, orient=HORIZONTAL, length=300, mode='determi
 my_progress.pack(pady=20)
 
 label1 = Label(root, text="")
+label1.place(x=20, y=20)
 label1.pack(pady=20)
 
 button_1 = Button(root, text="Missing", command=missing)
